@@ -1,0 +1,88 @@
+import numpy as np
+import tensorflow as tf
+
+from tensorflow.keras.applications import VGG16
+from tensorflow.keras.preprocessing.image import ImageDataGenerator
+
+from tensorflow.keras.layers import Dense,Flatten,Dropout
+from tensorflow.keras.models import Sequential,Model
+
+from tensorflow.keras.optimizers import Adam
+
+
+#////////////////////////////////////////////////////////////////
+
+# 1. Load and Preprocess the Dataset
+# Define paths to your dataset (train and validation directories)
+train_dir = '/path/to/animal-dataset/train'
+val_dir = '/path/to/animal-dataset/val'
+
+# ImageDataGenerator for image augmentation and preprocessing
+train_datagen = ImageDataGenerator(
+    rescale=1.0/255,
+    rotation_range=20,
+    width_shift_range=0.2,
+    height_shift_range=0.2,
+    shear_range=0.2,
+    zoom_range=0.2,
+    horizontal_flip=True
+)
+
+val_datagen = ImageDataGenerator(rescale=1.0/255)
+
+train_generator = train_datagen.flow_from_directory(
+    train_dir,
+    target_size=(224, 224),  # VGG16 input size
+    batch_size=32,
+    class_mode='categorical'
+)
+
+val_generator = val_datagen.flow_from_directory(
+    val_dir,
+    target_size=(224, 224),
+    batch_size=32,
+    class_mode='categorical'
+)
+
+#/////////////////////////////////////////////////////////////
+
+# 2. Set up Transfer Learning Model
+# Load VGG16 model, excluding top layers
+base_model = VGG16(weights='imagenet', include_top=False, input_shape=(224, 224, 3))
+
+# Freeze the layers of the base model
+for layer in base_model.layers:
+    layer.trainable = False
+
+# 3. Add custom layers for our animal classification
+x = base_model.output
+x = Flatten()(x)
+x = Dense(256, activation='relu')(x)
+x = Dropout(0.5)(x)
+output_layer = Dense(train_generator.num_classes, activation='softmax')(x)
+
+# Create the model
+model = Model(inputs=base_model.input, outputs=output_layer)
+
+# Compile the model
+model.compile(optimizer=Adam(learning_rate=0.0001), loss='categorical_crossentropy', metrics=['accuracy'])
+
+#//////////////////////////////////////////////////////////////////////////
+
+# 4. Train the Model
+epochs = 10
+history = model.fit(
+    train_generator,
+    epochs=epochs,
+    validation_data=val_generator,
+    verbose=1
+)
+
+#///////////////////////////////////////////////////////////////////////////////
+
+# 5. Evaluate the Model
+loss, accuracy = model.evaluate(val_generator, verbose=1)
+print(f"Validation Accuracy: {accuracy * 100:.2f}%")
+
+# Save the model
+model.save("animal_classifier_vgg16.h5")

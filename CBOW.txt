@@ -1,0 +1,65 @@
+import numpy as np
+from tensorflow.keras.preprocessing.text import Tokenizer
+from tensorflow.keras.preprocessing.sequence import pad_sequences
+from tensorflow.keras.models import Model
+from tensorflow.keras.layers import Input, Embedding, Lambda, Dense
+import tensorflow.keras.backend as K
+
+# Sample dataset
+sentences = [
+    "the quick brown fox jumped over the lazy dog",
+    "the dog is in the park",
+    "the fox is quick and the dog is lazy",
+    "a quick brown dog jumps over a lazy fox"
+]
+
+# Parameters
+embedding_dim = 50  # Dimension of embedding space
+window_size = 2  # Number of words around the target word to use as context
+
+# Step 1: Tokenize the text and create context-target pairs
+tokenizer = Tokenizer()
+tokenizer.fit_on_texts(sentences)
+vocab_size = len(tokenizer.word_index) + 1  # Add 1 for padding
+
+# Convert sentences to sequences of integers
+sequences = tokenizer.texts_to_sequences(sentences)
+
+# Create context-target pairs
+def generate_context_target_pairs(sequences, window_size):
+    context_target_pairs = []
+    for sequence in sequences:
+        for idx, target_word in enumerate(sequence):
+            start = max(0, idx - window_size)
+            end = min(len(sequence), idx + window_size + 1)
+            context_words = [sequence[i] for i in range(start, end) if i != idx]
+            if len(context_words) == 2 * window_size:
+                context_target_pairs.append((context_words, target_word))
+    return context_target_pairs
+
+context_target_pairs = generate_context_target_pairs(sequences, window_size)
+
+# Separate the context and target words
+contexts, targets = zip(*context_target_pairs)
+contexts = np.array(contexts)
+targets = np.array(targets)
+
+# Step 2: Define the CBOW Model
+input_context = Input(shape=(window_size * 2,))
+embedding = Embedding(input_dim=vocab_size, output_dim=embedding_dim, input_length=window_size * 2)(input_context)
+context_mean = Lambda(lambda x: K.mean(x, axis=1))(embedding)  # Average the context embeddings
+output = Dense(vocab_size, activation="softmax")(context_mean)
+
+model = Model(inputs=input_context, outputs=output)
+model.compile(loss="sparse_categorical_crossentropy", optimizer="adam", metrics=["accuracy"])
+
+# Step 3: Train the Model
+model.summary()
+model.fit(contexts, targets, epochs=100, verbose=2)
+
+# Display word embeddings after training
+word_embeddings = model.get_layer("embedding").get_weights()[0]
+
+# Map words to their embeddings
+word_to_embedding = {word: word_embeddings[idx] for word, idx in tokenizer.word_index.items()}
+print(word_to_embedding['dog'])  # Example: print embedding for the word 'dog'

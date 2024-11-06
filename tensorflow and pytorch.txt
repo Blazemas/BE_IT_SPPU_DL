@@ -1,0 +1,99 @@
+from numpy import loadtxt 
+from tensorflow.keras.models import Sequential 
+from tensorflow.keras.layers import Dense
+
+dataset=loadtxt('diabetes.csv', delimiter=',')
+x = dataset[:, 0:8]  
+y = dataset[:, 8] 
+
+print(type(x))
+print(type(x))
+
+model = Sequential()
+model.add(Dense(12, input_shape=(8,), activation='relu'))
+model.add(Dense(8, activation='relu'))
+model.add(Dense(1, activation='sigmoid'))
+model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
+model.fit(x, y, epochs=150, batch_size=10)
+
+
+loss, accuracy = model.evaluate(x, y) 
+print(f"Model accuracy: {accuracy * 100:.2f}%")
+
+predicted_probabilities = model.predict(x)
+
+predicted_classes = (predicted_probabilities > 0.5).astype(int)
+# Print the first 10 actual and predicted values 
+print("Actual values:", y[:10])
+print("Predicted probabilities:", predicted_probabilities[:10]) 
+print("Predicted classes:", predicted_classes[:10])
+
+--------------------------------------------------------------------------------------
+pytorch
+
+import torch 
+import numpy as np
+
+data = [
+[1,2],
+[3,4]
+]
+x = torch.tensor(data)
+print(type(x))
+
+np_array = np.array(data)
+x_np = torch.from_numpy(np_array)
+print(x_np)
+print(type(x_np))
+
+x_ones = torch.ones_like(x)
+print("One Tensor: \n",x_ones)
+x_rand = torch.rand_like(x,dtype=torch.float)
+print(x_rand)
+
+shape = (2,3)
+random_tensor = torch.rand(shape)
+print(random_tensor)
+print(type(random_tensor))
+
+ones_tensor = torch.ones(shape)
+print(ones_tensor)
+print(type(ones_tensor))
+
+zeros_tensor = torch.zeros(shape)
+print(zeros_tensor)
+print(type(zeros_tensor))
+
+tensor = torch.rand(3,4)
+print(tensor)
+print(tensor.shape)
+print(tensor.dtype)
+print(tensor.device)
+
+if torch.cuda.is_available():
+ tensor = tensor.to('cuda')
+ print("Device tensor is stored in ", tensor.device)
+
+# Indexing, Slicing
+tensor = torch.ones(4,4)
+print(tensor)
+print(tensor)
+tensor1 = torch.zeros(4,4)
+print(tensor1)
+tensor2 = torch.cat([tensor,tensor1])
+print(tensor2)
+
+tensor.mul(tensor1)
+tensor * tensor1
+tensor.T
+
+tensor.add_(3)
+print(tensor)
+
+# from tensor to numpy
+t = torch.ones(5)
+print(t)
+n = t.numpy()
+print(n)
+print(type(n))
+
